@@ -16,11 +16,11 @@ import co.elastic.clients.elasticsearch._types.aggregations.CompositeAggregation
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreBuilders;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchAllQuery;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
+import co.elastic.clients.elasticsearch.core.search.*;
 import co.elastic.clients.json.JsonData;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +106,51 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             List<String> starList = getAggByName(aggregations, "starAgg");
             result.put("starName", starList);
             return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<String> getSuggestions(String prefix) {
+        try {
+            // 1.准备Request
+            SearchRequest.Builder request = new SearchRequest.Builder().index("hotel");
+            // 1.准备DSL
+            request.suggest(Suggester.of(su -> su
+                    .suggesters("suggestions", sug -> sug
+                            .completion(c -> c
+                                    .field("suggestion")
+//                                    .prefix(prefix)
+                                    .skipDuplicates(true)
+                                    .size(10)
+                            )
+                    .text(prefix))));
+//        SearchRequest searchRequest = SearchRequest.of(s -> s
+//                .index("hotel")
+//                .suggest(Suggester.of(su->su
+//                        .suggesters("suggestions",sug->sug
+//                                .completion(c->c
+//                                        .field("title")
+//                                        .skipDuplicates(true)
+//                                        .prefix(prefix)
+//                                        .size(10)
+//                                )))));
+            // 3.发起请求
+            SearchResponse<HotelDoc> response = client.search(request.build(), HotelDoc.class);
+            // 4.解析结果
+            // 4.1.根据补全查询名称，获取补全结果
+            // 4.2.获取options
+            List<CompletionSuggestOption<HotelDoc>> options = response.suggest().get("suggestions").get(0).completion().options();
+            // 4.3.遍历
+            List<String> list = new ArrayList<>(options.size());
+            options.forEach(option->{
+                String text = option.text();
+                list.add(text);
+                System.out.println(text);
+            });
+//            System.out.println("options = " + options);
+            return list;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
