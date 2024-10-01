@@ -6,6 +6,12 @@ spring:
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+  rabbitmq:
+    host: 192.168.93.132  # 主机名
+    port: 5672 # 发送消息和接收消息的端口号
+    virtual-host: / # 虚拟主机
+    username: jensen # 用户名
+    password: 123456 # 密码
 logging:
   level:
     cn.itcast: debug

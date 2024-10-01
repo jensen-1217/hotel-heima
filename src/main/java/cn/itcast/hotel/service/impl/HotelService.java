@@ -9,6 +9,7 @@ import cn.itcast.hotel.service.IHotelService;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.DistanceUnit;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
@@ -18,13 +19,13 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreBuilders;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchAllQuery;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.search.*;
 import co.elastic.clients.json.JsonData;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.client.RequestOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -151,6 +152,39 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             });
 //            System.out.println("options = " + options);
             return list;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        try {
+            // 1.准备Request
+            // 2.发送请求
+            DeleteResponse deleteResponse = client.delete(i -> i.index("hotel").id(id.toString()));
+            Result result = deleteResponse.result();
+            System.out.println("Deleted".equals(result.toString())?"删除成功":"没有找到");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void insertById(Long id) {
+        try {
+            // 0.根据id查询酒店数据
+            Hotel hotel = this.getById(id);
+            // 转换为文档类型
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+
+            // 1.准备请求参数
+            UpdateRequest<String, HotelDoc> updateRequest = UpdateRequest.of(s -> s
+                    .index("hotel")
+                    .id(id.toString())
+                    .doc(hotelDoc));
+            UpdateResponse updateResponse = client.update(updateRequest, HotelDoc.class);
+            System.out.println(updateResponse.version());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
